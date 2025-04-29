@@ -37,3 +37,8 @@ pip install -r requirements.txt
 # Esegui il programma
 python -m main
 ```
+
+
+Inspiration 
+
+https://github.com/afikanyati/cadenCV
