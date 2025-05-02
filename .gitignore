@@ -1,4 +1,4 @@
-# Python
+# Python - file e directory generati da Python che non devono essere inclusi nel repository
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,12 +22,18 @@ var/
 .installed.cfg
 *.egg
 
-# IDE
+# IDE - file specifici degli ambienti di sviluppo
 .idea/
 .vscode/
 *.swp
 *.swo
 
-output/*
-input/*
+# Directory specifiche del progetto che contengono dati o risultati
+# Directory contenente i risultati dell'elaborazione
+output/*  
+# Directory contenente i file di input (PDF e immagini)
+input/*   
+# Directory per immagini temporanee o di test
 img/*
+
+cadenCV/

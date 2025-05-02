@@ -1,2 +1,3 @@
-# Auto detect text files and perform LF normalization
+# Rileva automaticamente i file di testo ed esegue la normalizzazione LF
+# Questo garantisce la consistenza delle terminazioni di riga tra sistemi operativi diversi
 * text=auto
