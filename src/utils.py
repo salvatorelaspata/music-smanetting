@@ -49,8 +49,8 @@ def locate_templates(img, templates, start, stop, threshold):
     locations, scale = match(img, templates, start, stop, threshold)
     img_locations = []
     for i in range(len(templates)):
-        cv2.imshow("Template", templates[i])
-        cv2.waitKey(0)
+        # cv2.imshow("Template", templates[i])
+        # cv2.waitKey(0)
         w, h = templates[i].shape[::-1]
         w *= scale
         h *= scale

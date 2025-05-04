@@ -2,9 +2,8 @@ import os
 import cv2
 from src.deskewing import get_ref_lengths
 from src.pdf_utils import is_pdf, pdf_to_images
-from src.staffline_detection import find_staffline_rows, find_staffline_columns
-from src.staffline_detection import create_staffs
-from src.detection import find_clef_time_signature
+from src.staffline_detection import find_staffline_rows, find_staffline_columns, create_staffs
+from src.detection import find_clef_time_signature, find_primitive
 
 def process_image(img_file, output_dir):
     """Elabora una singola immagine di spartito musicale
@@ -104,6 +103,9 @@ def process_image(img_file, output_dir):
     print("[INFO] Saving detected staffs onto disk")
 
     staffs, staff_imgs_color = find_clef_time_signature(staffs)
+
+    staffs, staff_imgs_color = find_primitive(staffs, staff_imgs_color)
+    
     # Salva l'immagine con le linee del pentagramma rilevate
     for i in range(len(staffs)):
         staff_img_color = staff_imgs_color[i]
@@ -131,6 +133,11 @@ def main(file_path):
         
         # Processa ogni immagine estratta dal PDF
         # Ogni pagina viene elaborata individualmente
+
+        print(f"[INFO] Trovate {len(image_paths)} pagine nel PDF")
+        # process only the first page
+        image_paths = image_paths[:1]
+
         for img_path in image_paths:
             process_image(img_path, output_dir)
     else:
