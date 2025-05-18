@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // import { PieChart, Bar } from "recharts";
@@ -17,7 +17,8 @@ import {
   FileText
 } from "lucide-react";
 import { useSheetMusicStore } from "@/lib/store/useSheetMusicStore";
-// import { detectMusicNotation } from "@/lib/opencv/opencvSetup";
+import { Button } from "@/components/ui/button";
+import { detectMusicNotation } from "@/lib/opencv/opencvSetup";
 
 // Data for analysis charts
 interface NoteDistribution {
