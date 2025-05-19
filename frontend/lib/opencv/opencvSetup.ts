@@ -15,40 +15,44 @@ let isLoaded = false;
  * @returns Promise that resolves when OpenCV is loaded and ready
  */
 export function initOpenCV(): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    // If already loaded, resolve immediately
     if (isLoaded) {
-      resolve();
-      return;
+      return resolve();
     }
 
-    if ((cv as any).ready) {
-      isLoaded = true;
-      resolve();
-      return;
-    }
+    try {
+      // Check if opencv-ts module is available and ready
+      if (cv && typeof cv.Mat === 'function') {
+        console.log('OpenCV is available via npm package');
+        isLoaded = true;
+        return resolve();
+      }
 
-    // Set up the callback for when OpenCV.js is loaded
-    window.onOpenCvReady = () => {
-      isLoaded = true;
-      resolve();
-    };
-
-    // Add OpenCV.js script to the DOM if it's not already there
-    if (!document.getElementById("opencv-script")) {
-      const script = document.createElement("script");
-      script.id = "opencv-script";
-      script.src = "https://docs.opencv.org/4.7.0/opencv.js";
-      script.async = true;
-      script.onload = () => {
-        if ((cv as any).ready) {
+      // If we reach here, it means the npm package is available but not fully initialized
+      console.log('OpenCV npm package needs initialization');
+      
+      // Give it a small timeout to finish initializing
+      const checkInterval = setInterval(() => {
+        if (cv && typeof cv.Mat === 'function') {
+          clearInterval(checkInterval);
           isLoaded = true;
+          console.log('OpenCV initialized successfully');
           resolve();
         }
-      };
-      script.onerror = (err) => {
-        console.error("Failed to load OpenCV.js", err);
-      };
-      document.body.appendChild(script);
+      }, 100);
+
+      // Set a timeout for initialization
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!isLoaded) {
+          console.error('OpenCV initialization timed out');
+          reject(new Error('OpenCV initialization timed out'));
+        }
+      }, 5000);
+    } catch (error) {
+      console.error('Error initializing OpenCV:', error);
+      reject(error);
     }
   });
 }
