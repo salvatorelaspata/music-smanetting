@@ -9,7 +9,7 @@ export default function Footer() {
           <MusicIcon className="h-5 w-5" />
           <span className="text-sm font-medium">Sheet Scan</span>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <Link href="/about" className="hover:text-foreground">
             About
@@ -24,11 +24,14 @@ export default function Footer() {
             Terms
           </Link>
         </div>
-        
+
         <div className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Sheet Scan. All rights reserved.
         </div>
-      </div>
+        {/* version */}
+        <div className="text-sm text-muted-foreground">
+          Version 0.0.1
+        </div>
     </footer>
   );
 }

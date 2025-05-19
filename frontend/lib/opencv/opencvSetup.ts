@@ -21,8 +21,7 @@ export function initOpenCV(): Promise<void> {
       return;
     }
 
-    if ((cv as any)['onRuntimeInitialized'] === undefined || (cv as any)['onRuntimeInitialized'] === null) {
-      // If OpenCV is already initialized, resolve immediately
+    if ((cv as any).ready) {
       isLoaded = true;
       resolve();
       return;
@@ -39,8 +38,9 @@ export function initOpenCV(): Promise<void> {
       const script = document.createElement("script");
       script.id = "opencv-script";
       script.src = "https://docs.opencv.org/4.7.0/opencv.js";
+      script.async = true;
       script.onload = () => {
-        if ((cv as any)['onRuntimeInitialized'] === undefined || (cv as any)['onRuntimeInitialized'] === null) {
+        if ((cv as any).ready) {
           isLoaded = true;
           resolve();
         }
