@@ -28,10 +28,11 @@ export default function Footer() {
         <div className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Sheet Scan. All rights reserved.
         </div>
-        {/* version */}
+
         <div className="text-sm text-muted-foreground">
           Version 0.0.1
         </div>
+      </div>
     </footer>
   );
 }
