@@ -3,8 +3,8 @@ import { MusicIcon } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="border-t py-6 md:py-8">
-      <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
+    <footer className="border-t py-6 md:py-8 items-center">
+      <div className="flex flex-col items-center justify-around gap-4 md:flex-row">
         <div className="flex items-center gap-2">
           <MusicIcon className="h-5 w-5" />
           <span className="text-sm font-medium">Sheet Scan</span>
