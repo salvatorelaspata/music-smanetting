@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Camera, Upload, FilePenLine, AlertCircle, Loader2 } from "lucide-react";
+import { Camera, Upload, FilePenLine, AlertCircle, Loader2, Plus, Trash, X, MoveLeft, MoveRight } from "lucide-react";
 import { useSheetMusicStore } from "@/lib/store/useSheetMusicStore";
 import { initOpenCV, detectDocumentEdges, detectStaffLines } from "@/lib/opencv/opencvSetup";
 import { useToast } from "@/hooks/use-toast";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 export default function ScanPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("upload");
-  const [image, setImage] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [processingStatus, setProcessingStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -112,14 +115,35 @@ export default function ScanPage() {
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImage(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const newFiles: File[] = [];
+    const fileReaders: FileReader[] = [];
+    const newImageUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      newFiles.push(file);
+
+      const reader = new FileReader();
+      fileReaders.push(reader);
+
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          newImageUrls.push(e.target.result as string);
+
+          // If we've processed all files, update state
+          if (newImageUrls.length === files.length) {
+            setImageFiles(prevFiles => [...prevFiles, ...newFiles]);
+            setImagePreviewUrls(prevUrls => [...prevUrls, ...newImageUrls]);
+            setActiveTab("preview");
+          }
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
   };
 
   // Handle drag events
@@ -148,22 +172,44 @@ export default function ScanPage() {
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
 
-    const file = files[0];
-    if (!file.type.match('image.*') && file.type !== 'application/pdf') {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image or PDF file.",
-        variant: "destructive",
-      });
-      return;
+    const newFiles: File[] = [];
+    const fileReaders: FileReader[] = [];
+    const newImageUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (!file.type.match('image.*') && file.type !== 'application/pdf') {
+        continue; // Skip non-image, non-PDF files
+      }
+
+      newFiles.push(file);
+      const reader = new FileReader();
+      fileReaders.push(reader);
+
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          newImageUrls.push(e.target.result as string);
+
+          // If we've processed all valid files, update state
+          if (newImageUrls.length === newFiles.length) {
+            setImageFiles(prevFiles => [...prevFiles, ...newFiles]);
+            setImagePreviewUrls(prevUrls => [...prevUrls, ...newImageUrls]);
+            setActiveTab("preview");
+          }
+        }
+      };
+
+      reader.readAsDataURL(file);
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImage(e.target?.result as string);
-      setActiveTab("preview");
-    };
-    reader.readAsDataURL(file);
+    if (newFiles.length === 0) {
+      toast({
+        title: "Invalid files",
+        description: "Please upload image or PDF files.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Start camera
@@ -221,17 +267,93 @@ export default function ScanPage() {
 
     ctx.drawImage(video, 0, 0);
 
-    setImage(canvas.toDataURL("image/png"));
+    const capturedImageUrl = canvas.toDataURL("image/png");
+    setImagePreviewUrls(prev => [...prev, capturedImageUrl]);
+
+    // Create a file from the canvas
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `scan-${Date.now()}.png`, { type: 'image/png' });
+        setImageFiles(prev => [...prev, file]);
+      }
+    });
+
     stopCamera();
     setActiveTab("preview");
   };
 
-  // Process the image with OpenCV
-  const processImage = async () => {
-    if (!image || !isOpenCVReady || !previewCanvasRef.current) {
+  // Remove a page from preview
+  const removePage = (index: number) => {
+    setImageFiles(prev => {
+      const newFiles = [...prev];
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+
+    setImagePreviewUrls(prev => {
+      const newUrls = [...prev];
+      newUrls.splice(index, 1);
+      return newUrls;
+    });
+
+    // Adjust the current preview index if needed
+    if (currentPreviewIndex >= index && currentPreviewIndex > 0) {
+      setCurrentPreviewIndex(prev => prev - 1);
+    }
+  };
+
+  // Move page left in the order
+  const movePageLeft = (index: number) => {
+    if (index === 0) return;
+
+    setImageFiles(prev => {
+      const newFiles = [...prev];
+      [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
+      return newFiles;
+    });
+
+    setImagePreviewUrls(prev => {
+      const newUrls = [...prev];
+      [newUrls[index - 1], newUrls[index]] = [newUrls[index], newUrls[index - 1]];
+      return newUrls;
+    });
+
+    if (currentPreviewIndex === index) {
+      setCurrentPreviewIndex(index - 1);
+    } else if (currentPreviewIndex === index - 1) {
+      setCurrentPreviewIndex(index);
+    }
+  };
+
+  // Move page right in the order
+  const movePageRight = (index: number) => {
+    if (index === imagePreviewUrls.length - 1) return;
+
+    setImageFiles(prev => {
+      const newFiles = [...prev];
+      [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
+      return newFiles;
+    });
+
+    setImagePreviewUrls(prev => {
+      const newUrls = [...prev];
+      [newUrls[index], newUrls[index + 1]] = [newUrls[index + 1], newUrls[index]];
+      return newUrls;
+    });
+
+    if (currentPreviewIndex === index) {
+      setCurrentPreviewIndex(index + 1);
+    } else if (currentPreviewIndex === index + 1) {
+      setCurrentPreviewIndex(index);
+    }
+  };
+
+  // Process the images
+  const processImages = async () => {
+    if (imagePreviewUrls.length === 0 || !isOpenCVReady) {
       toast({
         title: "Error",
-        description: "Image or OpenCV not ready. Please try again.",
+        description: "Please add at least one image before processing.",
         variant: "destructive",
       });
       return;
@@ -241,42 +363,15 @@ export default function ScanPage() {
     setIsProcessing(true);
 
     try {
-      // Create an image element to load the image data
-      const imgElement = document.createElement("img");
-      imgElement.src = image;
+      // Create an array of page objects with processed image URLs
+      const pages = imagePreviewUrls.map(imageUrl => ({
+        imageUrl
+      }));
 
-      // Wait for the image to load
-      await new Promise((resolve) => {
-        imgElement.onload = resolve;
-      });
-
-      // Draw the image to the preview canvas
-      const canvas = previewCanvasRef.current;
-      canvas.width = imgElement.width;
-      canvas.height = imgElement.height;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Could not get canvas context");
-
-      ctx.drawImage(imgElement, 0, 0);
-
-      // Get image data for processing
-      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      // Process with OpenCV
-      // const processedData = detectStaffLines(imageData);
-
-      // Draw the processed image back to the canvas
-      // ctx.putImageData(processedData, 0, 0);
-
-      // Save the processed image
-      const processedImageUrl = canvas.toDataURL("image/png");
-
-      // Add to store
+      // Add to store with all pages
       const id = addSheetMusic({
         name: "Sheet Music " + new Date().toLocaleString(),
-        imageUrl: processedImageUrl,
-        status: "scanned"
+        pages
       });
 
       setProcessingStatus("success");
@@ -286,11 +381,11 @@ export default function ScanPage() {
         router.push(`/editor?id=${id}`);
       }, 1500);
     } catch (error) {
-      console.error("Error processing image:", error);
+      console.error("Error processing images:", error);
       setProcessingStatus("error");
       toast({
         title: "Processing Error",
-        description: "Failed to process the image. Please try again.",
+        description: "Failed to process the images. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -313,12 +408,12 @@ export default function ScanPage() {
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Capture or Upload</CardTitle>
+          <CardTitle>Capture or Upload Multiple Pages</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="upload">Upload Image</TabsTrigger>
+              <TabsTrigger value="upload">Upload Images</TabsTrigger>
               <TabsTrigger value="camera">Use Camera</TabsTrigger>
             </TabsList>
 
@@ -334,10 +429,10 @@ export default function ScanPage() {
               >
                 <Upload className={`h-10 w-10 mb-2 mx-auto ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
                 <p className="text-lg font-semibold">
-                  {isDragging ? "Drop your file here" : "Drop your image here or click to browse"}
+                  {isDragging ? "Drop your files here" : "Drop your images here or click to browse"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Supports JPG, PNG and PDF files
+                  Supports multiple JPG, PNG and PDF files
                 </p>
                 <input
                   ref={fileInputRef}
@@ -345,8 +440,19 @@ export default function ScanPage() {
                   accept="image/*,.pdf"
                   className="hidden"
                   onChange={handleFileUpload}
+                  multiple
                 />
               </div>
+
+              {imagePreviewUrls.length > 0 && (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={() => setActiveTab("preview")}
+                >
+                  View {imagePreviewUrls.length} Selected Images
+                </Button>
+              )}
             </TabsContent>
 
             <TabsContent value="camera" className="space-y-4">
@@ -372,32 +478,159 @@ export default function ScanPage() {
                   {detectedCorners ? "Capture" : "Align document"}
                 </Button>
               </div>
+
+              {imagePreviewUrls.length > 0 && (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={() => setActiveTab("preview")}
+                >
+                  View {imagePreviewUrls.length} Captured Images
+                </Button>
+              )}
             </TabsContent>
 
             <TabsContent value="preview" className="space-y-4">
-              {image && (
-                <div className="space-y-4">
+              {imagePreviewUrls.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Current image preview */}
                   <div className="relative w-full overflow-hidden rounded-md border">
                     <img
-                      src={image}
-                      alt="Uploaded sheet music"
+                      src={imagePreviewUrls[currentPreviewIndex]}
+                      alt={`Sheet music page ${currentPreviewIndex + 1}`}
                       className="w-full h-auto object-contain"
                     />
+                    <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-sm">
+                      Page {currentPreviewIndex + 1} of {imagePreviewUrls.length}
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => setImage(null)}>
-                      Cancel
-                    </Button>
+
+                  {/* Pagination for multiple pages */}
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPreviewIndex > 0) {
+                              setCurrentPreviewIndex(currentPreviewIndex - 1);
+                            }
+                          }}
+                          aria-disabled={currentPreviewIndex === 0}
+                        />
+                      </PaginationItem>
+
+                      {imagePreviewUrls.map((_, index) => (
+                        <PaginationItem key={index}>
+                          <PaginationLink
+                            href="#"
+                            isActive={index === currentPreviewIndex}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPreviewIndex(index);
+                            }}
+                          >
+                            {index + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPreviewIndex < imagePreviewUrls.length - 1) {
+                              setCurrentPreviewIndex(currentPreviewIndex + 1);
+                            }
+                          }}
+                          aria-disabled={currentPreviewIndex === imagePreviewUrls.length - 1}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+
+                  {/* Page management controls */}
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <Button
-                      onClick={processImage}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => movePageLeft(currentPreviewIndex)}
+                      disabled={currentPreviewIndex === 0}
+                    >
+                      <MoveLeft className="h-4 w-4 mr-1" />
+                      Move Left
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removePage(currentPreviewIndex)}
+                      className="text-red-500 hover:bg-red-500/10"
+                    >
+                      <Trash className="h-4 w-4 mr-1" />
+                      Remove Page
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => movePageRight(currentPreviewIndex)}
+                      disabled={currentPreviewIndex === imagePreviewUrls.length - 1}
+                    >
+                      <MoveRight className="h-4 w-4 mr-1" />
+                      Move Right
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveTab(imagePreviewUrls.length > 0 ? "upload" : "camera");
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add More Pages
+                    </Button>
+                  </div>
+
+                  {/* Process button */}
+                  <div className="flex justify-between pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setImageFiles([]);
+                        setImagePreviewUrls([]);
+                        setCurrentPreviewIndex(0);
+                        setActiveTab("upload");
+                      }}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Clear All
+                    </Button>
+
+                    <Button
+                      onClick={processImages}
                       disabled={processingStatus === "processing"}
                     >
                       {processingStatus === "processing" && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Process Image
+                      Process {imagePreviewUrls.length} {imagePreviewUrls.length === 1 ? "Page" : "Pages"}
                     </Button>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-medium mb-2">No Pages Selected</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Please upload or capture at least one page
+                  </p>
+                  <Button onClick={() => setActiveTab("upload")}>
+                    Upload Images
+                  </Button>
                 </div>
               )}
             </TabsContent>
@@ -420,9 +653,9 @@ export default function ScanPage() {
         )}
       </Card>
 
-      <Separator className="my-6" />
+      {/* <Separator className="my-6" /> */}
 
-      <div className="prose dark:prose-invert max-w-none">
+      {/* <div className="prose dark:prose-invert max-w-none">
         <h2>Tips for best results</h2>
         <ul>
           <li>Ensure good lighting without shadows</li>
@@ -430,8 +663,9 @@ export default function ScanPage() {
           <li>Position the sheet music flat and centered</li>
           <li>Capture the entire page in the frame</li>
           <li>Keep the camera steady when taking a photo</li>
+          <li>For multi-page scores, maintain consistent orientation</li>
         </ul>
-      </div>
+      </div> */}
 
       {/* Hidden elements for processing */}
       <canvas ref={canvasRef} className="hidden" />

@@ -13,14 +13,23 @@ import {
   ZoomIn,
   ZoomOut,
   Info,
+  Plus,
+  ChevronRight,
+  ChevronLeft,
+  MoveUp,
+  MoveDown,
+  ArrowLeft,
+  ArrowRight,
+  FileTextIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useSheetMusicStore } from "@/lib/store/useSheetMusicStore";
+import { useSheetMusicStore, SheetMusicPage } from "@/lib/store/useSheetMusicStore";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function EditorPage() {
   const router = useRouter();
@@ -30,12 +39,13 @@ export default function EditorPage() {
   const id = searchParams.get("id");
   const [zoom, setZoom] = useState(1);
   const [tool, setTool] = useState<"select" | "annotate">("select");
-  const [activeTab, setActiveTab] = useState("notation");
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [annotationText, setAnnotationText] = useState("");
   const [annotationPosition, setAnnotationPosition] = useState({ x: 0, y: 0 });
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
+  const [showPageSidebar, setShowPageSidebar] = useState(true);
+  const [showAnnotationSidebar, setShowAnnotationSidebar] = useState(true);
 
   const {
     currentSheetMusic,
@@ -43,7 +53,11 @@ export default function EditorPage() {
     updateSheetMusic,
     addAnnotation,
     updateAnnotation,
-    deleteAnnotation
+    deleteAnnotation,
+    setCurrentPageIndex,
+    addPage,
+    deletePage,
+    reorderPages
   } = useSheetMusicStore();
 
   // Load sheet music data from id
@@ -55,7 +69,7 @@ export default function EditorPage() {
 
   // Handle click on image for annotation
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
-    if (tool !== "annotate" || !containerRef.current) return;
+    if (tool !== "annotate" || !containerRef.current || !currentSheetMusic) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / zoom;
@@ -69,7 +83,10 @@ export default function EditorPage() {
   const saveAnnotation = () => {
     if (!currentSheetMusic || !annotationText.trim()) return;
 
-    addAnnotation(currentSheetMusic.id, annotationText, annotationPosition);
+    const currentPage = getCurrentPage();
+    if (!currentPage) return;
+
+    addAnnotation(currentSheetMusic.id, currentPage.id, annotationText, annotationPosition);
     setAnnotationText("");
     setShowAnnotationInput(false);
 
@@ -108,6 +125,93 @@ export default function EditorPage() {
     router.push(`/analysis?id=${currentSheetMusic.id}`);
   };
 
+  // Helper to get current page
+  const getCurrentPage = (): SheetMusicPage | undefined => {
+    if (!currentSheetMusic || currentSheetMusic.pages.length === 0) return undefined;
+    return currentSheetMusic.pages[currentSheetMusic.currentPageIndex];
+  };
+
+  // Handle page navigation
+  const goToPage = (index: number) => {
+    if (!currentSheetMusic) return;
+    setCurrentPageIndex(currentSheetMusic.id, index);
+  };
+
+  const nextPage = () => {
+    if (!currentSheetMusic) return;
+    const newIndex = Math.min(currentSheetMusic.currentPageIndex + 1, currentSheetMusic.pages.length - 1);
+    setCurrentPageIndex(currentSheetMusic.id, newIndex);
+  };
+
+  const prevPage = () => {
+    if (!currentSheetMusic) return;
+    const newIndex = Math.max(currentSheetMusic.currentPageIndex - 1, 0);
+    setCurrentPageIndex(currentSheetMusic.id, newIndex);
+  };
+
+  // Handle page reordering
+  const movePageUp = () => {
+    if (!currentSheetMusic || currentSheetMusic.currentPageIndex === 0) return;
+
+    const currentIndex = currentSheetMusic.currentPageIndex;
+    const newOrder = [...currentSheetMusic.pages.map(p => p.id)];
+    [newOrder[currentIndex - 1], newOrder[currentIndex]] = [newOrder[currentIndex], newOrder[currentIndex - 1]];
+
+    reorderPages(currentSheetMusic.id, newOrder);
+    setCurrentPageIndex(currentSheetMusic.id, currentIndex - 1);
+  };
+
+  const movePageDown = () => {
+    if (!currentSheetMusic || currentSheetMusic.currentPageIndex === currentSheetMusic.pages.length - 1) return;
+
+    const currentIndex = currentSheetMusic.currentPageIndex;
+    const newOrder = [...currentSheetMusic.pages.map(p => p.id)];
+    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+
+    reorderPages(currentSheetMusic.id, newOrder);
+    setCurrentPageIndex(currentSheetMusic.id, currentIndex + 1);
+  };
+
+  // Handle page deletion
+  const handleDeletePage = () => {
+    if (!currentSheetMusic || !getCurrentPage() || currentSheetMusic.pages.length <= 1) return;
+
+    const currentPage = getCurrentPage();
+    if (!currentPage) return;
+
+    deletePage(currentSheetMusic.id, currentPage.id);
+
+    toast({
+      title: "Page Deleted",
+      description: "The page has been removed from your sheet music.",
+    });
+  };
+
+  // File input for adding new pages
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddPage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentSheetMusic) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        addPage(currentSheetMusic.id, e.target.result as string);
+
+        toast({
+          title: "Page Added",
+          description: "A new page has been added to your sheet music.",
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (!currentSheetMusic) {
     return (
       <div className="container mx-auto py-16 text-center">
@@ -120,12 +224,15 @@ export default function EditorPage() {
     );
   }
 
+  const currentPage = getCurrentPage();
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">{currentSheetMusic.name}</h1>
           <p className="text-muted-foreground">
+            Page {currentSheetMusic.currentPageIndex + 1} of {currentSheetMusic.pages.length} •
             Last updated: {new Date(currentSheetMusic.updatedAt).toLocaleString()}
           </p>
         </div>
@@ -141,245 +248,275 @@ export default function EditorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Tools sidebar */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Tools</CardTitle>
+      <div className="grid grid-cols-12 gap-4">
+        {/* Pages sidebar */}
+        <Card className={`${showPageSidebar ? 'col-span-2' : 'col-span-1'} transition-all duration-200 overflow-hidden`}>
+          <CardHeader className="p-3 flex flex-row items-center justify-between">
+            <CardTitle className={`text-sm ${!showPageSidebar && 'sr-only'}`}>Pages</CardTitle>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowPageSidebar(!showPageSidebar)}>
+              {showPageSidebar ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={tool === "select" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTool("select")}
-                className="justify-start"
-              >
-                <PenLine className="h-4 w-4 mr-2" />
-                Select
-              </Button>
-              <Button
-                variant={tool === "annotate" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTool("annotate")}
-                className="justify-start"
-              >
-                <Info className="h-4 w-4 mr-2" />
-                Annotate
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Zoom</p>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={handleZoomOut}>
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">{Math.round(zoom * 100)}%</span>
-                <Button size="sm" variant="outline" onClick={handleZoomIn}>
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
+          <CardContent className={`p-2 ${!showPageSidebar && 'hidden'}`}>
+            <ScrollArea className="h-[calc(100vh-240px)]">
+              <div className="space-y-2">
+                {currentSheetMusic.pages.map((page, index) => (
+                  <div
+                    key={page.id}
+                    className={`relative rounded-md overflow-hidden border-2 cursor-pointer transition-all ${currentSheetMusic.currentPageIndex === index ? 'border-primary' : 'border-transparent hover:border-muted-foreground/20'
+                      }`}
+                    onClick={() => goToPage(index)}
+                  >
+                    <img
+                      src={page.imageUrl}
+                      alt={`Page ${index + 1}`}
+                      className="w-full h-auto object-contain"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm px-2 py-0.5 text-xs text-center">
+                      Page {index + 1}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">History</p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline">
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Export</p>
-              <Button size="sm" variant="outline" className="w-full justify-start">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
+            </ScrollArea>
           </CardContent>
+          <CardFooter className={`p-3 ${!showPageSidebar && 'hidden'}`}>
+            <div className="w-full grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleAddPage}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleDeletePage}
+                disabled={currentSheetMusic.pages.length <= 1}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Delete
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={movePageUp}
+                disabled={currentSheetMusic.currentPageIndex === 0}
+              >
+                <MoveUp className="h-3 w-3 mr-1" />
+                Up
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={movePageDown}
+                disabled={currentSheetMusic.currentPageIndex === currentSheetMusic.pages.length - 1}
+              >
+                <MoveDown className="h-3 w-3 mr-1" />
+                Down
+              </Button>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+          </CardFooter>
         </Card>
 
         {/* Main content area */}
-        <div className="lg:col-span-10">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-2 max-w-md mb-6">
-              <TabsTrigger value="notation">Sheet Music</TabsTrigger>
-              <TabsTrigger value="annotations">Annotations</TabsTrigger>
-            </TabsList>
+        <div className={`${showPageSidebar ? 'col-span-7' : 'col-span-9'} ${showAnnotationSidebar ? '' : 'col-span-11'} transition-all duration-200`}>
+          <Card>
+            <CardHeader className="py-2 px-4 flex flex-row items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={prevPage}
+                  disabled={currentSheetMusic.currentPageIndex === 0}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Previous Page</span>
+                </Button>
+                <span className="text-sm">
+                  Page {currentSheetMusic.currentPageIndex + 1} of {currentSheetMusic.pages.length}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={nextPage}
+                  disabled={currentSheetMusic.currentPageIndex === currentSheetMusic.pages.length - 1}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Next Page</span>
+                </Button>
+              </div>
 
-            <TabsContent value="notation" className="space-y-4">
-              <Card>
-                <CardContent className="p-0 overflow-hidden">
-                  {/* Sheet music display */}
-                  <div
-                    ref={containerRef}
-                    className="relative overflow-auto bg-muted/30 p-4"
-                    style={{ minHeight: "60vh", maxHeight: "calc(100vh - 300px)" }}
-                  >
-                    <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
-                      <img
-                        ref={imageRef}
-                        src={currentSheetMusic.imageUrl}
-                        alt="Sheet Music"
-                        className="cursor-crosshair"
-                        onClick={handleImageClick}
-                      />
+              <div className="flex items-center space-x-1">
+                <Button variant={tool === "select" ? "secondary" : "ghost"} size="sm" onClick={() => setTool("select")}>
+                  <PenLine className="h-4 w-4 mr-1" />
+                  Select
+                </Button>
+                <Button variant={tool === "annotate" ? "secondary" : "ghost"} size="sm" onClick={() => setTool("annotate")}>
+                  <Info className="h-4 w-4 mr-1" />
+                  Annotate
+                </Button>
+                <Separator orientation="vertical" className="h-6 mx-1" />
+                <Button size="icon" variant="ghost" onClick={handleZoomOut}>
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="text-xs w-12 text-center">{Math.round(zoom * 100)}%</span>
+                <Button size="icon" variant="ghost" onClick={handleZoomIn}>
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
 
-                      {/* Render annotations */}
-                      {currentSheetMusic.annotations?.map((annotation) => (
-                        <div
-                          key={annotation.id}
-                          className="absolute bg-yellow-200/80 dark:bg-yellow-900/80 p-1 rounded shadow-md"
-                          style={{
-                            left: annotation.position.x,
-                            top: annotation.position.y,
-                            maxWidth: "200px"
-                          }}
-                        >
-                          <div className="flex text-xs justify-between mb-1">
-                            <span className="font-bold">Note</span>
-                            <button
-                              onClick={() => deleteAnnotation(currentSheetMusic.id, annotation.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <p className="text-xs">{annotation.text}</p>
-                        </div>
-                      ))}
-
-                      {/* Annotation input */}
-                      {showAnnotationInput && (
-                        <div
-                          className="absolute bg-card border rounded shadow-lg p-2"
-                          style={{
-                            left: annotationPosition.x,
-                            top: annotationPosition.y
-                          }}
-                        >
-                          <Textarea
-                            placeholder="Enter annotation..."
-                            value={annotationText}
-                            onChange={(e) => setAnnotationText(e.target.value)}
-                            className="min-h-0 text-sm mb-2"
-                            rows={2}
-                          />
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setShowAnnotationInput(false)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={saveAnnotation}
-                            >
-                              Save
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Playback</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full" disabled>
-                      <Play className="h-4 w-4 mr-2" />
-                      Play Sheet Music
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Playback feature coming soon
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Export Options</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start" disabled>
-                      <Download className="h-4 w-4 mr-2" />
-                      PDF
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start" disabled>
-                      <Download className="h-4 w-4 mr-2" />
-                      MusicXML
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div> */}
-            </TabsContent>
-
-            <TabsContent value="annotations" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Annotations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {currentSheetMusic.annotations && currentSheetMusic.annotations.length > 0 ? (
-                    <div className="space-y-4">
-                      {currentSheetMusic.annotations.map((annotation) => (
-                        <div
-                          key={annotation.id}
-                          className="p-3 border rounded-md"
-                        >
-                          <div className="flex justify-between mb-2">
-                            <span className="text-sm font-medium">
-                              Position: ({Math.round(annotation.position.x)}, {Math.round(annotation.position.y)})
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deleteAnnotation(currentSheetMusic.id, annotation.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                          <Textarea
-                            value={annotation.text}
-                            onChange={(e) => updateAnnotation(currentSheetMusic.id, annotation.id, e.target.value)}
-                            className="min-h-0"
-                            rows={2}
-                          />
-                        </div>
-                      ))}
-                    </div>
+            <CardContent className="p-0 overflow-hidden">
+              {/* Sheet music display */}
+              <div
+                ref={containerRef}
+                className="relative overflow-auto bg-muted/30 p-4"
+                style={{ height: "calc(100vh - 200px)" }}
+              >
+                <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
+                  {currentPage ? (
+                    <img
+                      ref={imageRef}
+                      src={currentPage.imageUrl}
+                      alt={`Page ${currentSheetMusic.currentPageIndex + 1}`}
+                      className={`cursor-${tool === "annotate" ? "crosshair" : "default"}`}
+                      onClick={handleImageClick}
+                    />
                   ) : (
-                    <div className="text-center py-8">
-                      <Info className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">No annotations yet</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Switch to the Sheet Music tab and use the Annotate tool to add notes
-                      </p>
+                    <div className="flex items-center justify-center h-96 bg-muted">
+                      <p className="text-muted-foreground">No page content</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+
+                  {/* Render annotations for current page */}
+                  {currentPage?.annotations?.map((annotation) => (
+                    <div
+                      key={annotation.id}
+                      className="absolute bg-yellow-200/80 dark:bg-yellow-900/80 p-1 rounded shadow-md"
+                      style={{
+                        left: annotation.position.x,
+                        top: annotation.position.y,
+                        maxWidth: "200px"
+                      }}
+                    >
+                      <div className="flex text-xs justify-between mb-1">
+                        <span className="font-bold">Note</span>
+                        <button
+                          onClick={() => currentPage && deleteAnnotation(currentSheetMusic.id, currentPage.id, annotation.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <p className="text-xs">{annotation.text}</p>
+                    </div>
+                  ))}
+
+                  {/* Annotation input */}
+                  {showAnnotationInput && (
+                    <div
+                      className="absolute bg-card border rounded shadow-lg p-2"
+                      style={{
+                        left: annotationPosition.x,
+                        top: annotationPosition.y
+                      }}
+                    >
+                      <Textarea
+                        placeholder="Enter annotation..."
+                        value={annotationText}
+                        onChange={(e) => setAnnotationText(e.target.value)}
+                        className="min-h-0 text-sm mb-2"
+                        rows={2}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowAnnotationInput(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={saveAnnotation}
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Annotations sidebar */}
+        <Card className={`${showAnnotationSidebar ? 'col-span-3' : 'col-span-1'} transition-all duration-200 overflow-hidden`}>
+          <CardHeader className="p-3 flex flex-row items-center justify-between">
+            <CardTitle className={`text-sm ${!showAnnotationSidebar && 'sr-only'}`}>Annotations</CardTitle>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowAnnotationSidebar(!showAnnotationSidebar)}>
+              {showAnnotationSidebar ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          </CardHeader>
+          <CardContent className={`p-3 ${!showAnnotationSidebar && 'hidden'}`}>
+            <ScrollArea className="h-[calc(100vh-240px)]">
+              {currentPage?.annotations && currentPage.annotations.length > 0 ? (
+                <div className="space-y-4">
+                  {currentPage.annotations.map((annotation) => (
+                    <div
+                      key={annotation.id}
+                      className="p-3 border rounded-md"
+                    >
+                      <div className="flex justify-between mb-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Position: ({Math.round(annotation.position.x)}, {Math.round(annotation.position.y)})
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => currentPage && deleteAnnotation(currentSheetMusic.id, currentPage.id, annotation.id)}
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={annotation.text}
+                        onChange={(e) => currentPage && updateAnnotation(currentSheetMusic.id, currentPage.id, annotation.id, e.target.value)}
+                        className="min-h-0"
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileTextIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">No annotations on this page</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use the Annotate tool to add notes to this page
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

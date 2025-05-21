@@ -61,13 +61,17 @@ export default function AnalysisPage() {
     setIsAnalyzing(true);
 
     try {
+      // We'll analyze the first page for now, but in a full implementation
+      // we would analyze all pages and combine the results
+      const firstPage = currentSheetMusic.pages[0];
+
       // Create a temporary canvas to get image data
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
       // Create an image to load the current sheet music
       const img = new Image();
-      img.src = currentSheetMusic.imageUrl;
+      img.src = firstPage.imageUrl;
 
       // Wait for the image to load
       await new Promise((resolve) => {
@@ -155,9 +159,10 @@ export default function AnalysisPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">{currentSheetMusic.name} - Analysis</h1>
           <p className="text-muted-foreground">
+            {currentSheetMusic.pages.length} {currentSheetMusic.pages.length === 1 ? 'page' : 'pages'} •
             {analysisComplete ?
-              `Analyzed on ${new Date(currentSheetMusic.updatedAt).toLocaleString()}` :
-              "Ready for analysis"
+              ` Analyzed on ${new Date(currentSheetMusic.updatedAt).toLocaleString()}` :
+              " Ready for analysis"
             }
           </p>
         </div>

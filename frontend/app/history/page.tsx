@@ -16,7 +16,8 @@ import {
   FileCheck,
   FileEdit,
   FilePenLine,
-  AlertCircle
+  AlertCircle,
+  FileStack
 } from "lucide-react";
 import { useSheetMusicStore, SheetMusic } from "@/lib/store/useSheetMusicStore";
 import { useToast } from "@/hooks/use-toast";
@@ -113,11 +114,25 @@ export default function HistoryPage() {
           {sheetMusics.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <div className="relative h-40 bg-muted">
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-full object-contain"
-                />
+                {item.pages && item.pages.length > 0 ? (
+                  <>
+                    <img
+                      src={item.pages[0].imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-contain"
+                    />
+                    {item.pages.length > 1 && (
+                      <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-xs flex items-center">
+                        <FileStack className="h-3 w-3 mr-1" />
+                        {item.pages.length} pages
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>No pages</p>
+                  </div>
+                )}
                 <div className="absolute bottom-2 right-2">
                   <Badge
                     variant="outline"
@@ -201,7 +216,10 @@ export default function HistoryPage() {
               <DialogTitle>Delete Sheet Music</DialogTitle>
             </DialogHeader>
             <p>
-              Are you sure you want to delete "{selectedItem.name}"? This action cannot be undone.
+              Are you sure you want to delete "{selectedItem.name}"?
+              {selectedItem.pages && selectedItem.pages.length > 1 &&
+                ` This will delete all ${selectedItem.pages.length} pages.`
+              } This action cannot be undone.
             </p>
             <DialogFooter>
               <DialogClose asChild>
