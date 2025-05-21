@@ -26,6 +26,7 @@ export default function ScanPage() {
   const [isOpenCVReady, setIsOpenCVReady] = useState(false);
   const [detectedCorners, setDetectedCorners] = useState<{ x: number; y: number }[] | null>(null);
   const animationFrameRef = useRef<number>();
+  const [isDragging, setIsDragging] = useState(false);
 
   const { addSheetMusic, setIsScanning, setIsProcessing } = useSheetMusicStore();
 
@@ -117,6 +118,50 @@ export default function ScanPage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       setImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle drag events
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.match('image.*') && file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image or PDF file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImage(e.target?.result as string);
+      setActiveTab("preview");
     };
     reader.readAsDataURL(file);
   };
@@ -216,13 +261,13 @@ export default function ScanPage() {
       ctx.drawImage(imgElement, 0, 0);
 
       // Get image data for processing
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       // Process with OpenCV
-      const processedData = detectStaffLines(imageData);
+      // const processedData = detectStaffLines(imageData);
 
       // Draw the processed image back to the canvas
-      ctx.putImageData(processedData, 0, 0);
+      // ctx.putImageData(processedData, 0, 0);
 
       // Save the processed image
       const processedImageUrl = canvas.toDataURL("image/png");
@@ -279,11 +324,18 @@ export default function ScanPage() {
 
             <TabsContent value="upload" className="space-y-4">
               <div
-                className="border-2 border-dashed rounded-md p-10 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                className={`border-2 border-dashed rounded-md p-10 text-center cursor-pointer transition-colors ${isDragging ? "bg-primary/10 border-primary" : "hover:bg-muted/50"
+                  }`}
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                <Upload className="h-10 w-10 mb-2 mx-auto text-muted-foreground" />
-                <p className="text-lg font-semibold">Drop your image here or click to browse</p>
+                <Upload className={`h-10 w-10 mb-2 mx-auto ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                <p className="text-lg font-semibold">
+                  {isDragging ? "Drop your file here" : "Drop your image here or click to browse"}
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Supports JPG, PNG and PDF files
                 </p>

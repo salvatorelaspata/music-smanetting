@@ -13,16 +13,12 @@ import {
   ZoomIn,
   ZoomOut,
   Info,
-  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useSheetMusicStore } from "@/lib/store/useSheetMusicStore";
 
@@ -42,7 +38,6 @@ export default function EditorPage() {
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
 
   const {
-    sheetMusics,
     currentSheetMusic,
     setCurrentSheetMusic,
     updateSheetMusic,
@@ -303,7 +298,7 @@ export default function EditorPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader>
                     <CardTitle>Playback</CardTitle>
@@ -334,7 +329,7 @@ export default function EditorPage() {
                     </Button>
                   </CardContent>
                 </Card>
-              </div>
+              </div> */}
             </TabsContent>
 
             <TabsContent value="annotations" className="space-y-4">
