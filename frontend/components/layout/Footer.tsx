@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="flex flex-col items-center justify-around gap-4 md:flex-row">
         <div className="flex items-center gap-2">
           <MusicIcon className="h-5 w-5" />
-          <span className="text-sm font-medium">Sheet Scan</span>
+          <span className="text-sm font-medium">Sheet Scan <span className="text-muted-foreground font-mono text-xs">(v0.0.1)</span></span>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -27,10 +27,6 @@ export default function Footer() {
 
         <div className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Sheet Scan. All rights reserved.
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          Version 0.0.1
         </div>
       </div>
     </footer>
