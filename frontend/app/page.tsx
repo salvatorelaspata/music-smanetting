@@ -164,7 +164,7 @@ interface StepCardProps {
 function StepCard({ number, title, description }: StepCardProps) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold mb-4">
+      <div className="flex h-14 w-14 items-center bg-primary/10 justify-center rounded-full bold text-2xl font-bold mb-4">
         {number}
       </div>
       <h3 className="text-xl font-bold">{title}</h3>

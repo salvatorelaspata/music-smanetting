@@ -3,14 +3,16 @@ import { MusicIcon } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="border-t py-6 md:py-8 items-center">
-      <div className="flex flex-col items-center justify-around gap-4 md:flex-row">
-        <div className="flex items-center gap-2">
-          <MusicIcon className="h-5 w-5" />
-          <span className="text-sm font-medium">Sheet Scan <span className="text-muted-foreground font-mono text-xs">(v0.0.1)</span></span>
+    <footer className="border-t py-6 md:py-8">
+      <div className="grid grid-cols-3">
+        <div className="flex text-center justify-center">
+          <div className="flex items-center flex-row gap-2">
+            <MusicIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">Sheet Scan <span className="text-muted-foreground font-mono text-xs">(v0.0.1)</span></span>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Link href="/about" className="hover:text-foreground">
             About
           </Link>
@@ -25,10 +27,10 @@ export default function Footer() {
           </Link>
         </div>
 
-        <div className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Sheet Scan. All rights reserved.
         </div>
-      </div>
-    </footer>
+      </div >
+    </footer >
   );
 }
