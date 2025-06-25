@@ -117,3 +117,6 @@ next-env.d.ts
 
 .next/
 out/
+
+output/
+uploads/
