@@ -1,6 +1,9 @@
 # Dipendenze per l'elaborazione degli spartiti musicali
 contourpy==1.3.2
 cycler==0.12.1
+flask==3.1.0
+werkzeug==3.1.3
+flask-cors==5.0.0
 fonttools==4.57.0
 kiwisolver==1.4.8
 matplotlib==3.10.1
