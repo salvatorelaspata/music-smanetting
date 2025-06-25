@@ -12,8 +12,8 @@ export function AnalysisSummary({ analysis }: AnalysisSummaryProps) {
     const key = analysis?.key || "an unknown key";
     const timeSignature = analysis?.timeSignature || " unknown";
     const measures = analysis?.measures || "several";
-    const tempo = analysis?.tempo 
-      ? ` ${analysis.tempo} beats per minute` 
+    const tempo = analysis?.tempo
+      ? ` ${analysis.tempo} beats per minute`
       : " unknown tempo";
 
     return `This sheet music is in ${key} with a${timeSignature} time signature. 
