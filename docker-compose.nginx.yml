@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - processing
+    networks:
+      - music-scanner-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+    depends_on:
+      - processing
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+  processing:
+    build:
+      context: ./processing
+      dockerfile: Dockerfile
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=server.py
+      - PORT=5001
+    volumes:
+      - processing_uploads:/app/uploads
+      - processing_output:/app/output
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+networks:
+  music-scanner-network:
+    driver: bridge
+
+volumes:
+  processing_uploads:
+    driver: local
+  processing_output:
+    driver: local

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps  # Stop at deps stage for development
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:5001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+    depends_on:
+      - processing
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+  processing:
+    build:
+      context: ./processing
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=server.py
+      - PORT=5001
+    volumes:
+      - ./processing:/app
+      - processing_uploads:/app/uploads
+      - processing_output:/app/output
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+networks:
+  music-scanner-network:
+    driver: bridge
+
+volumes:
+  processing_uploads:
+    driver: local
+  processing_output:
+    driver: local

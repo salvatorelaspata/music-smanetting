@@ -31,7 +31,7 @@ export function initOpenCV(): Promise<void> {
 
       // If we reach here, it means the npm package is available but not fully initialized
       console.log('OpenCV npm package needs initialization');
-      
+
       // Give it a small timeout to finish initializing
       const checkInterval = setInterval(() => {
         if (cv && typeof cv.Mat === 'function') {
@@ -49,7 +49,7 @@ export function initOpenCV(): Promise<void> {
           console.error('OpenCV initialization timed out');
           reject(new Error('OpenCV initialization timed out'));
         }
-      }, 5000);
+      }, 5001);
     } catch (error) {
       console.error('Error initializing OpenCV:', error);
       reject(error);

@@ -1,0 +1,43 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001}
+    depends_on:
+      - processing
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+  processing:
+    build:
+      context: ./processing
+      dockerfile: Dockerfile
+    ports:
+      - "${PROCESSING_PORT:-5001}:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=server.py
+      - PORT=5001
+    volumes:
+      # Persist uploads and output directories
+      - processing_uploads:/app/uploads
+      - processing_output:/app/output
+    restart: unless-stopped
+    networks:
+      - music-scanner-network
+
+networks:
+  music-scanner-network:
+    driver: bridge
+
+volumes:
+  processing_uploads:
+    driver: local
+  processing_output:
+    driver: local
