@@ -12,6 +12,7 @@ import {
 import { SheetMusic, SheetMusicPage } from "@/lib/store/useSheetMusicStore";
 import { AnnotationOverlay } from "./AnnotationOverlay";
 import { AnnotationInput } from "./AnnotationInput";
+import Image from "next/image";
 
 interface EditorCanvasProps {
   sheetMusic: SheetMusic;
@@ -140,7 +141,14 @@ export function EditorCanvas({
           >
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
               {currentPage ? (
-                <img
+                // <img
+                //   ref={imageRef}
+                //   src={currentPage.imageUrl}
+                //   alt={`Page ${sheetMusic.currentPageIndex + 1}`}
+                //   className={`cursor-${tool === "annotate" ? "crosshair" : "default"}`}
+                //   onClick={onImageClick}
+                // />
+                <Image
                   ref={imageRef}
                   src={currentPage.imageUrl}
                   alt={`Page ${sheetMusic.currentPageIndex + 1}`}

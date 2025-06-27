@@ -14,6 +14,7 @@ import {
   FileStack
 } from "lucide-react";
 import { SheetMusic } from "@/lib/store/useSheetMusicStore";
+import Image from "next/image";
 
 interface HistoryCardProps {
   item: SheetMusic;
@@ -69,7 +70,12 @@ export function HistoryCard({ item, onEdit, onAnalyze, onDelete }: HistoryCardPr
       <div className="relative h-40 bg-muted">
         {item.pages && item.pages.length > 0 ? (
           <>
-            <img
+            {/* <img
+              src={item.pages[0].imageUrl}
+              alt={item.name}
+              className="w-full h-full object-contain"
+            /> */}
+            <Image
               src={item.pages[0].imageUrl}
               alt={item.name}
               className="w-full h-full object-contain"

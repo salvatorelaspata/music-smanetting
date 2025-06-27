@@ -23,7 +23,7 @@ export default function EditorPage() {
     if (id) {
       editor.initializeSheetMusic(id);
     }
-  }, [id, editor.initializeSheetMusic]);
+  }, [id, editor]);
 
   // If no sheet music is loaded, show empty state
   if (!editor.currentSheetMusic) {

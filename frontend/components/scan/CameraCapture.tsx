@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Camera } from "lucide-react";
@@ -29,7 +29,7 @@ export function CameraCapture({
   const animationFrameRef = useRef<number>();
 
   // Process video frame
-  const processVideoFrame = () => {
+  const processVideoFrame = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current || !isOpenCVReady) {
       animationFrameRef.current = requestAnimationFrame(processVideoFrame);
       return;
@@ -79,10 +79,10 @@ export function CameraCapture({
     }
 
     animationFrameRef.current = requestAnimationFrame(processVideoFrame);
-  };
+  }, [isOpenCVReady]);
 
   // Start camera
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -108,10 +108,10 @@ export function CameraCapture({
         variant: "destructive",
       });
     }
-  };
+  }, [toast, processVideoFrame]);
 
   // Stop camera
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -119,7 +119,7 @@ export function CameraCapture({
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-  };
+  }, [stream]);
 
   // Take photo from camera
   const capturePhoto = () => {
@@ -155,7 +155,7 @@ export function CameraCapture({
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [startCamera, stopCamera]);
 
   return (
     <TabsContent value="camera" className="space-y-4">

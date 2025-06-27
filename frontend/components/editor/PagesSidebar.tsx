@@ -10,6 +10,7 @@ import {
   MoveDown,
 } from "lucide-react";
 import { SheetMusic } from "@/lib/store/useSheetMusicStore";
+import Image from "next/image";
 
 interface PagesSidebarProps {
   sheetMusic: SheetMusic;
@@ -52,15 +53,22 @@ export function PagesSidebar({
               <div
                 key={page.id}
                 className={`relative rounded-md overflow-hidden border-2 cursor-pointer transition-all ${sheetMusic.currentPageIndex === index
-                    ? 'border-primary'
-                    : 'border-transparent hover:border-muted-foreground/20'
+                  ? 'border-primary'
+                  : 'border-transparent hover:border-muted-foreground/20'
                   }`}
                 onClick={() => onPageSelect(index)}
               >
-                <img
+                {/* <img
                   src={page.imageUrl}
                   alt={`Page ${index + 1}`}
                   className="w-full h-auto object-contain"
+                /> */}
+                <Image
+                  src={page.imageUrl}
+                  alt={`Page ${index + 1}`}
+                  className="w-full h-auto object-contain"
+                  width={500} // Adjust as needed
+                  height={700} // Adjust as needed
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm px-2 py-0.5 text-xs text-center">
                   Page {index + 1}

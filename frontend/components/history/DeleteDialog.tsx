@@ -19,7 +19,7 @@ export function DeleteDialog({ item, open, onOpenChange, onConfirmDelete }: Dele
           <DialogTitle>Delete Sheet Music</DialogTitle>
         </DialogHeader>
         <p>
-          Are you sure you want to delete "{item.name}"?
+          Are you sure you want to delete {`"${item.name}"`}?
           {item.pages && item.pages.length > 1 &&
             ` This will delete all ${item.pages.length} pages.`
           } This action cannot be undone.

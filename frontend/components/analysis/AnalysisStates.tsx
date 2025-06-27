@@ -27,7 +27,7 @@ export function AnalysisStates({
             <Loader2 className="h-16 w-16 mx-auto mb-4 animate-spin text-primary" />
             <h2 className="text-xl font-bold mb-2">Analyzing Your Sheet Music</h2>
             <p className="text-muted-foreground">
-              This may take a moment. We're detecting notes, analyzing the key signature,
+              This may take a moment. We{`'`}re detecting notes, analyzing the key signature,
               identifying the time signature, and processing other musical elements.
             </p>
           </div>
@@ -43,7 +43,7 @@ export function AnalysisStates({
           <BarChart4 className="h-16 w-16 mx-auto mb-4 text-primary/60" />
           <h2 className="text-xl font-bold mb-2">Ready for Analysis</h2>
           <p className="text-muted-foreground mb-6">
-            Click the "Analyze Sheet Music" button above to start the analysis process.
+            Click the {`"`}Analyze Sheet Music{`"`} button above to start the analysis process.
             This will detect notes, key signatures, time signatures, and more.
           </p>
           <Button onClick={onAnalyze}>

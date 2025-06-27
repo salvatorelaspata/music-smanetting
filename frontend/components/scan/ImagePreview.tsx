@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { AlertCircle, Loader2, Plus, Trash, X, MoveLeft, MoveRight } from "lucide-react";
+import Image from "next/image";
 
 interface ImagePreviewProps {
   imageUrls: string[];
@@ -53,7 +54,12 @@ export function ImagePreview({
       <div className="space-y-6">
         {/* Current image preview */}
         <div className="relative w-full overflow-hidden rounded-md border">
-          <img
+          {/* <img
+            src={imageUrls[currentPreviewIndex]}
+            alt={`Sheet music page ${currentPreviewIndex + 1}`}
+            className="w-full h-auto object-contain"
+          /> */}
+          <Image
             src={imageUrls[currentPreviewIndex]}
             alt={`Sheet music page ${currentPreviewIndex + 1}`}
             className="w-full h-auto object-contain"

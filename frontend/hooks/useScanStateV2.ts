@@ -1,36 +1,14 @@
-"use client";
-
-// Deprecato: Usa useScanStore direttamente o useScanStateV2 per nuove implementazioni
-import { useScanStore, ScanFile } from "../lib/store/useScanStore";
-
-interface UseScanState {
-  imageFiles: File[];
-  imagePreviewUrls: string[];
-  currentPreviewIndex: number;
-  processingStatus: "idle" | "processing" | "success" | "error";
-  isDragging: boolean;
-}
-
-interface UseScanActions {
-  addImages: (files: File[], urls?: string[]) => Promise<void>;
-  removePage: (index: number) => void;
-  movePageLeft: (index: number) => void;
-  movePageRight: (index: number) => void;
-  clearAll: () => void;
-  setProcessingStatus: (status: "idle" | "processing" | "success" | "error") => void;
-  setIsDragging: (isDragging: boolean) => void;
-  setCurrentPreviewIndex: (index: number) => void;
-}
+import { useScanStore, ScanFile } from '../lib/store/useScanStore';
 
 /**
- * @deprecated Usa useScanStore direttamente per migliori performance e funzionalità
- * Questo hook mantiene la compatibilità con il codice esistente
+ * Hook di compatibilità per facilitare la migrazione da useScanState al nuovo useScanStore
+ * Mantiene la stessa interfaccia del vecchio hook per evitare breaking changes
  */
-export function useScanState(): [UseScanState, UseScanActions] {
+export function useScanState() {
   const store = useScanStore();
 
-  // Trasforma i dati dello store nel formato atteso
-  const state: UseScanState = {
+  // Trasforma i dati dello store nel formato atteso dal vecchio hook
+  const state = {
     imageFiles: store.files.map((f: ScanFile) => f.file),
     imagePreviewUrls: store.files.map((f: ScanFile) => f.previewUrl),
     currentPreviewIndex: store.currentPreviewIndex,
@@ -38,7 +16,7 @@ export function useScanState(): [UseScanState, UseScanActions] {
     isDragging: store.isDragging,
   };
 
-  const actions: UseScanActions = {
+  const actions = {
     addImages: async (files: File[], urls?: string[]) => {
       // Il nuovo store gestisce automaticamente la creazione delle preview URLs
       await store.addFiles(files);
@@ -76,5 +54,13 @@ export function useScanState(): [UseScanState, UseScanActions] {
     },
   };
 
-  return [state, actions];
+  return [state, actions] as const;
+}
+
+/**
+ * Hook ottimizzato che espone direttamente le funzionalità del nuovo store
+ * Da usare per nuovi componenti o quando si migra completamente
+ */
+export function useScanStateV2() {
+  return useScanStore();
 }
