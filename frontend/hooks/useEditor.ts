@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useSheetMusicStore } from "@/lib/store/useSheetMusicStore";
@@ -26,7 +26,9 @@ export function useEditor(sheetMusicId: string | null) {
   // Store
   const {
     currentSheetMusic,
-    setCurrentSheetMusic,
+    isLoading,
+    error,
+    fetchSheetMusicById,
     updateSheetMusic,
     addAnnotation,
     updateAnnotation,
@@ -184,7 +186,7 @@ export function useEditor(sheetMusicId: string | null) {
 
   // Initialize sheet music
   const initializeSheetMusic = (id: string) => {
-    setCurrentSheetMusic(id);
+    fetchSheetMusicById(id);
   };
 
   return {
@@ -200,6 +202,8 @@ export function useEditor(sheetMusicId: string | null) {
     setAnnotationText,
     annotationPosition,
     showAnnotationInput,
+    isLoading,
+    error,
 
     // Refs
     imageRef,

@@ -15,3 +15,7 @@ PyMuPDF==1.25.5  # Libreria per la gestione dei PDF
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 six==1.17.0
+
+pymongo
+
+boto3

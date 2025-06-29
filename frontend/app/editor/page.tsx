@@ -10,6 +10,7 @@ import {
   EditorHeader,
   EmptyState,
 } from "@/components/editor";
+import { Loader2 } from "lucide-react";
 
 export default function EditorPage() {
   const router = useRouter();
@@ -26,6 +27,18 @@ export default function EditorPage() {
   }, [id, editor]);
 
   // If no sheet music is loaded, show empty state
+  if (editor.isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (editor.error) {
+    return <div className="text-red-500 text-center">{editor.error}</div>;
+  }
+
   if (!editor.currentSheetMusic) {
     return <EmptyState onScanNew={() => router.push("/scan")} />;
   }

@@ -15,6 +15,7 @@ import {
   AnalysisSummary
 } from "@/components/analysis";
 import { NoteDistribution } from "@/types/analysis";
+
 export default function AnalysisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,15 +25,17 @@ export default function AnalysisPage() {
 
   const {
     currentSheetMusic,
-    setCurrentSheetMusic
+    isLoading,
+    error,
+    fetchSheetMusicById,
   } = useSheetMusicStore();
 
   // Load sheet music data from id
   useEffect(() => {
     if (id) {
-      setCurrentSheetMusic(id);
+      fetchSheetMusicById(id);
     }
-  }, [id, setCurrentSheetMusic]);
+  }, [id, fetchSheetMusicById]);
 
   // Return to editor
   const goBackToEditor = () => {
@@ -44,6 +47,18 @@ export default function AnalysisPage() {
   const handleAnalyze = () => {
     performAnalysis();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center">{error}</div>;
+  }
 
   if (!currentSheetMusic) {
     return (

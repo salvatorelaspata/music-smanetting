@@ -10,6 +10,10 @@ import base64
 from datetime import datetime
 import zipfile
 import tempfile
+from pymongo import MongoClient
+from bson import ObjectId
+import boto3
+from botocore.client import Config
 
 # Import delle funzioni di processamento esistenti
 from src.pdf_utils import is_pdf, pdf_to_images
@@ -32,6 +36,32 @@ MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB max file size
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["OUTPUT_FOLDER"] = OUTPUT_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
+
+# Configurazione MongoDB
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+client = MongoClient(MONGO_URI)
+db = client["music_smanetting"]
+sheet_music_collection = db["sheet_music"]
+
+# Configurazione S3 (MinIO)
+S3_PUBLIC_URL = os.environ.get("S3_PUBLIC_URL", "http://localhost:9000")
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", "minioadmin")
+S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "minioadmin")
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "sheetmusic")
+
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=S3_ENDPOINT_URL,
+    aws_access_key_id=S3_ACCESS_KEY_ID,
+    aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+    config=Config(signature_version="s3v4"),
+)
+
+# Creazione del bucket se non esiste
+try:
+    s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
+except Exception as e:
+    s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
 
 # Assicurati che le cartelle esistano
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -320,6 +350,70 @@ def get_inline_demo_html():
     """
 
 
+@app.route("/api/sheetmusic", methods=["GET"])
+def get_all_sheet_music():
+    """Ottiene tutti gli spartiti dal database"""
+    try:
+        all_music = list(sheet_music_collection.find())
+        for music in all_music:
+            music["_id"] = str(music["_id"])
+        return jsonify(all_music)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sheetmusic", methods=["POST"])
+def create_sheet_music():
+    """Crea un nuovo spartito nel database"""
+    try:
+        data = request.get_json()
+        data["createdAt"] = datetime.utcnow()
+        data["updatedAt"] = datetime.utcnow()
+        result = sheet_music_collection.insert_one(data)
+        return jsonify({"inserted_id": str(result.inserted_id)}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sheetmusic/<sheet_id>", methods=["GET"])
+def get_sheet_music(sheet_id):
+    """Ottiene un singolo spartito dal database"""
+    try:
+        music = sheet_music_collection.find_one({"_id": ObjectId(sheet_id)})
+        if music:
+            music["_id"] = str(music["_id"])
+            return jsonify(music)
+        else:
+            return jsonify({"error": "Spartito non trovato"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sheetmusic/<sheet_id>", methods=["PUT"])
+def update_sheet_music(sheet_id):
+    """Aggiorna uno spartito nel database"""
+    try:
+        data = request.get_json()
+        data["updatedAt"] = datetime.utcnow()
+        result = sheet_music_collection.update_one({"_id": ObjectId(sheet_id)}, {"$set": data})
+        if result.matched_count > 0:
+            return jsonify({"message": "Spartito aggiornato con successo"})
+        else:
+            return jsonify({"error": "Spartito non trovato"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sheetmusic/<sheet_id>", methods=["DELETE"])
+def delete_sheet_music(sheet_id):
+    """Elimina uno spartito dal database"""
+    try:
+        result = sheet_music_collection.delete_one({"_id": ObjectId(sheet_id)})
+        if result.deleted_count > 0:
+            return jsonify({"message": "Spartito eliminato con successo"})
+        else:
+            return jsonify({"error": "Spartito non trovato"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 @app.route("/health", methods=["GET"])
 def health():
     """Endpoint per verificare lo stato del server"""
@@ -363,32 +457,46 @@ def upload_and_process():
         # Genera un ID univoco per questo lavoro
         job_id = str(uuid.uuid4())
 
-        # Salva il file caricato
+        # Salva il file caricato temporaneamente
         filename = secure_filename(file.filename)
-        file_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_{filename}")
-        file.save(file_path)
+        temp_file_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_{filename}")
+        file.save(temp_file_path)
+
+        # Carica il file su MinIO
+        s3_object_name = f"{job_id}/{filename}"
+        s3_client.upload_file(temp_file_path, S3_BUCKET_NAME, s3_object_name)
+        s3_url = f"{S3_PUBLIC_URL}/{S3_BUCKET_NAME}/{s3_object_name}"
+
+        # Rimuovi il file temporaneo
+        os.remove(temp_file_path)
 
         # Ottieni informazioni sul file
-        file_info = get_file_info(file_path)
+        file_info = {
+            "size": file.content_length,
+            "is_pdf": is_pdf(filename),
+        }
 
         # Directory di output per questo lavoro
         job_output_dir = os.path.join(OUTPUT_FOLDER, job_id)
         os.makedirs(job_output_dir, exist_ok=True)
 
-        # Salva i metadati del lavoro
+        # Salva i metadati del lavoro in MongoDB
         job_metadata = {
+            "_id": ObjectId(),
             "job_id": job_id,
-            "filename": filename,
-            "uploaded_at": datetime.now().isoformat(),
-            "file_info": file_info,
+            "name": filename,
+            "createdAt": datetime.utcnow(),
+            "updatedAt": datetime.utcnow(),
             "status": "processing",
-            "file_path": file_path,
-            "output_dir": job_output_dir,
+            "pages": [{
+                "_id": ObjectId(),
+                "pageNumber": 1,
+                "imageUrl": s3_url,
+                "annotations": []
+            }],
+            "analysis": {},
         }
-
-        metadata_path = os.path.join(job_output_dir, "metadata.json")
-        with open(metadata_path, "w") as f:
-            json.dump(job_metadata, f, indent=2)
+        sheet_music_collection.insert_one(job_metadata)
 
         # Avvia il processamento
         try:

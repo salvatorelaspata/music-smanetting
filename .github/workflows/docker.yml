@@ -2,7 +2,7 @@ name: Docker Build and Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -80,8 +80,14 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
+    - name: Check Docker installed
+      run: docker --version
+      
+    - name: Check Docker Compose installed
+      run: docker compose version
+
     - name: Test Docker Compose
       run: |
-        echo "Testing docker-compose configuration..."
-        docker-compose config
+        echo "Testing docker compose configuration..."
+        docker compose config
         echo "Docker Compose configuration is valid!"

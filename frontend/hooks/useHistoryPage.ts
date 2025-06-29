@@ -6,7 +6,13 @@ import { useToast } from "@/hooks/use-toast";
 export function useHistoryPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { sheetMusics, deleteSheetMusic } = useSheetMusicStore();
+  const {
+    sheetMusics,
+    isLoading,
+    error,
+    fetchSheetMusic,
+    deleteSheetMusic,
+  } = useSheetMusicStore();
   const [selectedItem, setSelectedItem] = useState<SheetMusic | null>(null);
 
   const handleDeleteSheetMusic = (id: string) => {
@@ -42,6 +48,9 @@ export function useHistoryPage() {
   return {
     sheetMusics,
     selectedItem,
+    isLoading,
+    error,
+    fetchSheetMusic,
     handleDeleteSheetMusic,
     handleEdit,
     handleAnalyze,

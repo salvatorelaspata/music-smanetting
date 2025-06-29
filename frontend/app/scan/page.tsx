@@ -4,16 +4,16 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useScanState } from "@/hooks/useScanState";
-import { useOpenCV } from "@/hooks/useOpenCV";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
+// import { useOpenCV } from "@/hooks/useOpenCV";
+// import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { FileUpload, CameraCapture, ImagePreview, OpenCVStatus } from "@/components/scan";
 
 export default function ScanPage() {
   const [activeTab, setActiveTab] = useState("upload");
 
   const [state, actions] = useScanState();
-  const { isOpenCVReady } = useOpenCV();
-  const { processImages: processImagesHandler } = useImageProcessing();
+  // const { isOpenCVReady } = useOpenCV();
+  // const { processImages: processImagesHandler } = useImageProcessing();
 
   // Handle file upload
   const handleFilesUploaded = (files: File[], imageUrls: string[]) => {
@@ -22,10 +22,10 @@ export default function ScanPage() {
   };
 
   // Handle camera capture
-  const handleImageCaptured = (imageUrl: string, file: File) => {
-    actions.addImages([file], [imageUrl]);
-    setActiveTab("preview");
-  };
+  // const handleImageCaptured = (imageUrl: string, file: File) => {
+  //   actions.addImages([file], [imageUrl]);
+  //   setActiveTab("preview");
+  // };
 
   // Handle add more pages
   const handleAddMorePages = () => {
@@ -34,7 +34,8 @@ export default function ScanPage() {
 
   // Process the images
   const processImages = async () => {
-    await processImagesHandler(state.imagePreviewUrls, isOpenCVReady, actions.setProcessingStatus);
+    alert("Processing images... This feature is under development.");
+    // await processImagesHandler(state.imagePreviewUrls, isOpenCVReady, actions.setProcessingStatus);
   };
 
   const handleClearAll = () => {
@@ -64,12 +65,15 @@ export default function ScanPage() {
             />
 
             {activeTab === "camera" && (
-              <CameraCapture
-                isOpenCVReady={isOpenCVReady}
-                onImageCaptured={handleImageCaptured}
-                onViewCaptured={() => setActiveTab("preview")}
-                capturedCount={state.imagePreviewUrls.length}
-              />
+              // <CameraCapture
+              //   isOpenCVReady={isOpenCVReady}
+              //   onImageCaptured={handleImageCaptured}
+              //   onViewCaptured={() => setActiveTab("preview")}
+              //   capturedCount={state.imagePreviewUrls.length}
+              // />
+              <p className="text-center text-muted-foreground">
+                Camera capture is currently under development. Please use the upload feature.
+              </p>
             )}
 
             <ImagePreview
@@ -86,7 +90,7 @@ export default function ScanPage() {
             />
           </Tabs>
         </CardContent>
-        <OpenCVStatus isReady={isOpenCVReady} />
+        {/* <OpenCVStatus isReady={isOpenCVReady} /> */}
       </Card>
     </div>
   );

@@ -79,7 +79,7 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-12 md:py-24 lg:py-32 bg-muted w-full">
+      <section className="py-12 md:py-24 lg:py-32 bg-muted w-full flex justify-center">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
